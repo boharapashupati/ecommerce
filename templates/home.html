@@ -1,0 +1,145 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}Home - E-commerce Store{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <section class="row hero-section mb-5">
+        <div class="col-md-6 d-flex flex-column justify-content-center">
+            <h1 class="display-4 fw-bold">Find Your Perfect Products</h1>
+            <p class="lead">Discover amazing deals on our top-quality products.</p>
+            <div>
+                <a href="{% url 'product-list' %}" class="btn btn-primary btn-lg">Shop Now</a>
+                <a href="#featured-products" class="btn btn-outline-primary btn-lg ms-2">Explore</a>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <img src="{% static 'images/hero-image.jpg' %}" alt="Shopping" class="img-fluid rounded">
+        </div>
+    </section>
+
+    <!-- Featured Products -->
+    <section id="featured-products" class="mb-5">
+        <h2 class="section-title mb-4">Featured Products</h2>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+            {% for product in featured_products %}
+                <div class="col">
+                    {% include 'components/product_card.html' with product=product %}
+                </div>
+            {% empty %}
+                <div class="col-12 text-center">
+                    <p>No featured products available at the moment.</p>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="text-center mt-4">
+            <a href="{% url 'product-list' %}" class="btn btn-outline-primary">View All Products</a>
+        </div>
+    </section>
+
+    <!-- Categories -->
+    <section class="mb-5">
+        <h2 class="section-title mb-4">Shop by Category</h2>
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for category in categories %}
+                <div class="col">
+                    <a href="{% url 'product-list' %}?category={{ category.slug }}" class="text-decoration-none">
+                        <div class="card category-card h-100">
+                            {% if category.image %}
+                                <img src="{{ category.image.url }}" class="card-img-top category-img" alt="{{ category.name }}">
+                            {% else %}
+                                <img src="{% static 'images/placeholder.jpg' %}" class="card-img-top category-img" alt="{{ category.name }}">
+                            {% endif %}
+                            <div class="card-img-overlay d-flex align-items-end">
+                                <h5 class="card-title text-white bg-dark bg-opacity-75 p-2 rounded w-100 text-center mb-0">{{ category.name }}</h5>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center">
+                    <p>No categories available at the moment.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+    
+    <!-- Testimonials Section -->
+    <section class="mb-5">
+        <h2 class="section-title mb-4">What Our Customers Say</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4 mb-md-0">
+                <div class="card testimonial-card h-100">
+                    <div class="card-body">
+                        <div class="text-warning mb-3">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <p class="card-text">"Amazing quality products and fast delivery. I'm extremely satisfied with my purchase!"</p>
+                        <div class="d-flex align-items-center mt-3">
+                            <div class="testimonial-avatar">
+                                <img src="{% static 'images/avatar1.jpg' %}" alt="Customer" class="rounded-circle">
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="mb-0">John Doe</h6>
+                                <small class="text-muted">Loyal Customer</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4 mb-md-0">
+                <div class="card testimonial-card h-100">
+                    <div class="card-body">
+                        <div class="text-warning mb-3">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                        </div>
+                        <p class="card-text">"The customer service is exceptional. They went above and beyond to help me with my order."</p>
+                        <div class="d-flex align-items-center mt-3">
+                            <div class="testimonial-avatar">
+                                <img src="{% static 'images/avatar2.jpg' %}" alt="Customer" class="rounded-circle">
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="mb-0">Jane Smith</h6>
+                                <small class="text-muted">New Customer</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card testimonial-card h-100">
+                    <div class="card-body">
+                        <div class="text-warning mb-3">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <p class="card-text">"Great prices and a wide variety of products to choose from. Definitely my go-to online store!"</p>
+                        <div class="d-flex align-items-center mt-3">
+                            <div class="testimonial-avatar">
+                                <img src="{% static 'images/avatar3.jpg' %}" alt="Customer" class="rounded-circle">
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="mb-0">Mike Johnson</h6>
+                                <small class="text-muted">Regular Customer</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

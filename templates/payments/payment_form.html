@@ -1,0 +1,382 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<script src="https://js.stripe.com/v3/"></script>
+<script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Payment Details</h3>
+                </div>
+                <div class="card-body">
+                    <div class="order-summary mb-4">
+                        <h4>Order Summary</h4>
+                        <p>Total Amount: ${{ order.total_amount }}</p>
+                        <p>Order ID: {{ order.id }}</p>
+                    </div>
+
+                    <!-- Payment Method Selection -->
+                    <div class="payment-methods mb-4">
+                        <h5>Select Payment Method</h5>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="payment_method" id="stripe" value="stripe" checked>
+                            <label class="btn btn-outline-primary" for="stripe">Credit Card</label>
+
+                            <input type="radio" class="btn-check" name="payment_method" id="paypal" value="paypal">
+                            <label class="btn btn-outline-primary" for="paypal">PayPal</label>
+
+                            <input type="radio" class="btn-check" name="payment_method" id="apple_pay" value="apple_pay">
+                            <label class="btn btn-outline-primary" for="apple_pay">Apple Pay</label>
+
+                            <input type="radio" class="btn-check" name="payment_method" id="google_pay" value="google_pay">
+                            <label class="btn btn-outline-primary" for="google_pay">Google Pay</label>
+                        </div>
+                    </div>
+
+                    <!-- Stripe Payment Form -->
+                    <div id="stripe-form">
+                        <form id="payment-form">
+                            <div class="form-group mb-3">
+                                <label for="card-element">Credit or debit card</label>
+                                <div id="card-element" class="form-control">
+                                    <!-- Stripe Element will be inserted here -->
+                                </div>
+                                <div id="card-errors" class="invalid-feedback" role="alert"></div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100" id="submit-button">
+                                <span id="button-text">Pay Now</span>
+                                <div id="spinner" class="spinner-border text-light d-none" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- PayPal Button -->
+                    <div id="paypal-form" class="d-none">
+                        <div id="paypal-button-container"></div>
+                    </div>
+
+                    <!-- Apple Pay Button -->
+                    <div id="apple-pay-form" class="d-none">
+                        <button id="apple-pay-button" class="btn btn-primary w-100">
+                            Pay with Apple Pay
+                        </button>
+                    </div>
+
+                    <!-- Google Pay Button -->
+                    <div id="google-pay-form" class="d-none">
+                        <button id="google-pay-button" class="btn btn-primary w-100">
+                            Pay with Google Pay
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initialize Stripe
+    const stripe = Stripe('{{ stripe_public_key }}');
+    const elements = stripe.elements();
+
+    // Create card Element and mount it
+    const card = elements.create('card', {
+        style: {
+            base: {
+                fontSize: '16px',
+                color: '#424770',
+                '::placeholder': {
+                    color: '#aab7c4'
+                }
+            },
+            invalid: {
+                color: '#9e2146'
+            }
+        }
+    });
+    card.mount('#card-element');
+
+    // Handle payment method selection
+    const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
+    const stripeForm = document.getElementById('stripe-form');
+    const paypalForm = document.getElementById('paypal-form');
+    const applePayForm = document.getElementById('apple-pay-form');
+    const googlePayForm = document.getElementById('google-pay-form');
+
+    paymentMethods.forEach(method => {
+        method.addEventListener('change', (e) => {
+            stripeForm.classList.add('d-none');
+            paypalForm.classList.add('d-none');
+            applePayForm.classList.add('d-none');
+            googlePayForm.classList.add('d-none');
+
+            switch(e.target.value) {
+                case 'stripe':
+                    stripeForm.classList.remove('d-none');
+                    break;
+                case 'paypal':
+                    paypalForm.classList.remove('d-none');
+                    break;
+                case 'apple_pay':
+                    applePayForm.classList.remove('d-none');
+                    break;
+                case 'google_pay':
+                    googlePayForm.classList.remove('d-none');
+                    break;
+            }
+        });
+    });
+
+    // Initialize PayPal
+    paypal.Buttons({
+        createOrder: async () => {
+            try {
+                const response = await fetch('/api/payments/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        order_id: {{ order.id }},
+                        payment_method: 'paypal'
+                    })
+                });
+                const data = await response.json();
+                return data.paypal_order_id;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        },
+        onApprove: async (data) => {
+            try {
+                const response = await fetch('/api/payments/verify-paypal/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        order_id: {{ order.id }},
+                        paypal_order_id: data.orderID
+                    })
+                });
+                if (response.ok) {
+                    window.location.href = '/payments/{{ order.id }}/success/';
+                } else {
+                    const errorData = await response.json();
+                    window.location.href = `/payments/{{ order.id }}/failure/?error=${encodeURIComponent(errorData.error)}`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = `/payments/{{ order.id }}/failure/?error=${encodeURIComponent(error.message)}`;
+            }
+        }
+    }).render('#paypal-button-container');
+
+    // Initialize Apple Pay
+    if (window.ApplePaySession && ApplePaySession.canMakePayments()) {
+        const applePayButton = document.getElementById('apple-pay-button');
+        applePayButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/payments/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        order_id: {{ order.id }},
+                        payment_method: 'apple_pay'
+                    })
+                });
+                const data = await response.json();
+                
+                const paymentRequest = stripe.paymentRequest({
+                    country: 'US',
+                    currency: 'usd',
+                    total: {
+                        label: 'Order Payment',
+                        amount: {{ order.total_amount }} * 100,
+                    },
+                    requestPayerName: true,
+                    requestPayerEmail: true,
+                    requestPayerPhone: true,
+                });
+
+                const pr = paymentRequest.createPaymentMethod();
+                pr.on('paymentmethod', async (e) => {
+                    try {
+                        const { paymentMethod, error } = await stripe.confirmCardPayment(
+                            data.client_secret,
+                            { payment_method: e.paymentMethod.id }
+                        );
+                        if (error) {
+                            e.complete('fail');
+                            window.location.href = `/payments/{{ order.id }}/failure/?error=${encodeURIComponent(error.message)}`;
+                        } else {
+                            e.complete('success');
+                            window.location.href = '/payments/{{ order.id }}/success/';
+                            window.location.href = '/orders/{{ order.id }}/';
+                        }
+                    } catch (error) {
+                        e.complete('fail');
+                    }
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+    } else {
+        document.getElementById('apple-pay-button').style.display = 'none';
+    }
+
+    // Initialize Google Pay
+    const googlePayButton = document.getElementById('google-pay-button');
+    googlePayButton.addEventListener('click', async () => {
+        try {
+            const response = await fetch('/api/payments/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Token ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    order_id: {{ order.id }},
+                    payment_method: 'google_pay'
+                })
+            });
+            const data = await response.json();
+            
+            const paymentRequest = stripe.paymentRequest({
+                country: 'US',
+                currency: 'usd',
+                total: {
+                    label: 'Order Payment',
+                    amount: {{ order.total_amount }} * 100,
+                },
+                requestPayerName: true,
+                requestPayerEmail: true,
+                requestPayerPhone: true,
+                paymentMethodTypes: ['card'],
+                paymentMethodOptions: {
+                    card: {
+                        requestPayerName: true,
+                        requestPayerEmail: true,
+                        requestPayerPhone: true,
+                        requestPayerAddress: true,
+                        tokenizationSpecification: {
+                            type: 'PAYMENT_GATEWAY',
+                            parameters: {
+                                gateway: 'stripe',
+                                'stripe:version': '2020-08-27',
+                                'stripe:publishableKey': '{{ stripe_public_key }}'
+                            }
+                        }
+                    }
+                }
+            });
+
+            const pr = paymentRequest.createPaymentMethod();
+            pr.on('paymentmethod', async (e) => {
+                try {
+                    const { paymentMethod, error } = await stripe.confirmCardPayment(
+                        data.client_secret,
+                        { payment_method: e.paymentMethod.id }
+                    );
+                    if (error) {
+                        e.complete('fail');
+                    } else {
+                        e.complete('success');
+                        window.location.href = '/orders/{{ order.id }}/';
+                    }
+                } catch (error) {
+                    e.complete('fail');
+                }
+            });
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    });
+
+    // Handle Stripe form submission
+    const form = document.getElementById('payment-form');
+    const submitButton = document.getElementById('submit-button');
+    const spinner = document.getElementById('spinner');
+    const buttonText = document.getElementById('button-text');
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        submitButton.disabled = true;
+        spinner.classList.remove('d-none');
+        buttonText.textContent = 'Processing...';
+
+        try {
+            const response = await fetch('/api/payments/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Token ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    order_id: {{ order.id }},
+                    payment_method: 'stripe'
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                const result = await stripe.confirmCardPayment(data.client_secret, {
+                    payment_method: {
+                        card: card,
+                        billing_details: {
+                            name: '{{ user.get_full_name }}',
+                            email: '{{ user.email }}'
+                        }
+                    }
+                });
+
+                if (result.error) {
+                    const errorElement = document.getElementById('card-errors');
+                    errorElement.textContent = result.error.message;
+                    errorElement.style.display = 'block';
+                } else {
+                    window.location.href = '/orders/{{ order.id }}/';
+                }
+            } else {
+                throw new Error(data.error || 'Something went wrong');
+            }
+        } catch (error) {
+            const errorElement = document.getElementById('card-errors');
+            errorElement.textContent = error.message;
+            errorElement.style.display = 'block';
+        } finally {
+            submitButton.disabled = false;
+            spinner.classList.add('d-none');
+            buttonText.textContent = 'Pay Now';
+        }
+    });
+
+    // Handle card element errors
+    card.on('change', function(event) {
+        const displayError = document.getElementById('card-errors');
+        if (event.error) {
+            displayError.textContent = event.error.message;
+            displayError.style.display = 'block';
+        } else {
+            displayError.textContent = '';
+            displayError.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %} 

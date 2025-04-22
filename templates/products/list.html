@@ -1,0 +1,153 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}Products - E-commerce Store{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Products</h1>
+    
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{% url 'product-list' %}">
+                        <!-- Search -->
+                        <div class="mb-3">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="search" value="{{ request.GET.search }}">
+                        </div>
+                        
+                        <!-- Categories -->
+                        <div class="mb-3">
+                            <label class="form-label">Categories</label>
+                            <div class="list-group">
+                                {% for category in categories %}
+                                <label class="list-group-item">
+                                    <input class="form-check-input me-1" type="checkbox" name="category" 
+                                          value="{{ category.id }}" {% if category.id|stringformat:"i" in request.GET.getlist 'category' %}checked{% endif %}>
+                                    {{ category.name }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Price Range -->
+                        <div class="mb-3">
+                            <label class="form-label">Price Range</label>
+                            <div class="d-flex">
+                                <input type="number" class="form-control me-2" placeholder="Min" name="min_price" value="{{ request.GET.min_price }}">
+                                <input type="number" class="form-control" placeholder="Max" name="max_price" value="{{ request.GET.max_price }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Sort Options -->
+                        <div class="mb-3">
+                            <label for="sort" class="form-label">Sort By</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                                <option value="-name" {% if request.GET.sort == '-name' %}selected{% endif %}>Name (Z-A)</option>
+                                <option value="price" {% if request.GET.sort == 'price' %}selected{% endif %}>Price (Low to High)</option>
+                                <option value="-price" {% if request.GET.sort == '-price' %}selected{% endif %}>Price (High to Low)</option>
+                                <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Newest</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                        <a href="{% url 'product-list' %}" class="btn btn-outline-secondary w-100 mt-2">Clear Filters</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Products List -->
+        <div class="col-lg-9">
+            <!-- Products Count -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <p class="mb-0">Showing {{ products.start_index }} to {{ products.end_index }} of {{ paginator.count }} products</p>
+                <div>
+                    <label for="paginate" class="me-2">Show:</label>
+                    <select id="paginate" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                        <option value="12" {% if request.GET.per_page == '12' %}selected{% endif %}>12</option>
+                        <option value="24" {% if request.GET.per_page == '24' %}selected{% endif %}>24</option>
+                        <option value="48" {% if request.GET.per_page == '48' %}selected{% endif %}>48</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Product Grid -->
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                {% for product in products %}
+                <div class="col">
+                    {% include 'components/product_card.html' with product=product %}
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        No products found matching your criteria. Try adjusting your filters.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if products.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if products.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% url_replace page=products.previous_page_number %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&laquo;</span>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in paginator.page_range %}
+                    {% if products.number == i %}
+                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                    {% elif i > products.number|add:'-3' and i < products.number|add:'3' %}
+                    <li class="page-item"><a class="page-link" href="?{% url_replace page=i %}">{{ i }}</a></li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if products.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% url_replace page=products.next_page_number %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&raquo;</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle pagination change
+        const paginateSelect = document.getElementById('paginate');
+        paginateSelect.addEventListener('change', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('per_page', this.value);
+            urlParams.set('page', '1');
+            window.location.search = urlParams.toString();
+        });
+    });
+</script>
+{% endblock %} 

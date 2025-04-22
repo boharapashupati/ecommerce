@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .error-icon {
+            color: #dc3545;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .order-details {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .error-message {
+            background-color: #fff3f3;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="error-icon">✕</div>
+        <h1>Payment Failed</h1>
+    </div>
+
+    <p>Dear {{ user.get_full_name }},</p>
+
+    <p>We're sorry, but your payment could not be processed. Here are the details of your attempt:</p>
+
+    <div class="order-details">
+        <h3>Order Details</h3>
+        <p><strong>Order ID:</strong> {{ order.id }}</p>
+        <p><strong>Amount:</strong> ${{ order.total_amount }}</p>
+        <p><strong>Date:</strong> {{ payment.created_at|date:"F j, Y" }}</p>
+    </div>
+
+    <div class="error-message">
+        <h4>Error Message:</h4>
+        <p>{{ error_message }}</p>
+    </div>
+
+    <p>You can try the payment again by clicking the button below:</p>
+
+    <div style="text-align: center;">
+        <a href="{{ retry_url }}" class="button">Try Payment Again</a>
+    </div>
+
+    <div class="footer">
+        <p>If you continue to experience issues, please contact our support team for assistance.</p>
+        <p>© {{ current_year }} Your Store Name. All rights reserved.</p>
+    </div>
+</body>
+</html> 
